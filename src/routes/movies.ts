@@ -7,7 +7,7 @@ const router = Router();
 // add movie
 router.post("/", async (req: Request, res: Response) => {
   try {
-    const { Title, Year, Runtime, Genre, Director } = req.body;
+    const { imdbID, Title, Year, Runtime, Genre, Director } = req.body;
 
     const response = await axios.get("http://www.omdbapi.com/", {
       params: {
@@ -17,14 +17,12 @@ router.post("/", async (req: Request, res: Response) => {
     });
 
     const result = await pool.query(
-      `INSERT INTO movies (title, year, runtime, genre, director)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (title) DO NOTHING
+      `INSERT INTO movies (title, year, runtime, genre, director, imdb_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (imdb_id) DO NOTHING
        RETURNING *`,
-      [Title, Year, Runtime, Genre, Director]
+      [Title, Year, Runtime, Genre, Director, imdbID]
     );
-
-    console.log('RESPONSE: ', response.data);
 
     if (result.rows.length === 0 || response.data.Response === 'True') {
       return res.status(409).json({ error: "Movie already exists." });
@@ -37,7 +35,31 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
-export default router;
+router.patch("/", async (req: Request, res: Response) => {
+  try {
+    const { imdbID } = req.params;
+    const { title, year, runtime, genre, director } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO movies (title, year, runtime, genre, director)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (title) DO UPDATE
+       SET title = COALESCE($1, movies.title),
+           year = COALESCE($2, movies.year),
+           runtime = COALESCE($3, movies.runtime),
+           genre = COALESCE($4, movies.genre),
+           director = COALESCE($5, movies.director)
+       RETURNING *`,
+      [title, year, runtime, genre, director]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
 
 // 🔍 Search OMDB by title
 router.get("/search", async (req: Request, res: Response) => {
@@ -97,3 +119,5 @@ router.get("/favorites", async (_req: Request, res: Response) => {
     res.status(500).json({ error: "Database error" });
   }
 });
+
+export default router;
