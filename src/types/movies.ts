@@ -5,3 +5,12 @@ export type Search = {
   Type: string;
   Poster: string;
 };
+
+export type AddingMovie = {
+  imdbID: string;
+  Title: string;
+  Year: string;
+  Runtime: string;
+  Genre: string;
+  Director: string;
+};
