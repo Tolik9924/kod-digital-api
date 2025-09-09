@@ -1,3 +1,5 @@
+import { GENRE_NAMES } from "../constants/movies";
+
 export type Search = {
   Title: string;
   Year: string;
@@ -14,3 +16,5 @@ export type AddingMovie = {
   Genre: string;
   Director: string;
 };
+
+export type GenreName = (typeof GENRE_NAMES)[number];
