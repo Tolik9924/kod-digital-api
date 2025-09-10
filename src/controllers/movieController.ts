@@ -10,19 +10,19 @@ export const createMovie = async (req: Request, res: Response) => {
     const response = await axios.get("http://www.omdbapi.com/", {
       params: {
         apikey: process.env.OMDB_API_KEY,
-        t: Title
-      }
+        t: Title,
+      },
     });
 
     const result = await pool.query(
-      `INSERT INTO movies (title, year, runtime, genre, director, imdb_id)
+      `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID")
        VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (imdb_id) DO NOTHING
+       ON CONFLICT ("imdbID") DO NOTHING
        RETURNING *`,
       [Title, Year, Runtime, Genre, Director, imdbID]
     );
 
-    if (result.rows.length === 0 || response.data.Response === 'True') {
+    if (result.rows.length === 0 || response.data.Response === "True") {
       return res.status(409).json({ error: "Movie already exists." });
     }
 
@@ -39,14 +39,14 @@ export const editMovie = async (req: Request, res: Response) => {
     const { Title, Year, Runtime, Genre, Director } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO movies (imdb_id, title, year, runtime, genre, director)
+      `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director")
        VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (imdb_id) DO UPDATE
-       SET title = COALESCE($2, movies.title),
-           year = COALESCE($3, movies.year),
-           runtime = COALESCE($4, movies.runtime),
-           genre = COALESCE($5, movies.genre),
-           director = COALESCE($6, movies.director)
+       ON CONFLICT ("imdbID") DO UPDATE
+       SET "Title" = COALESCE($2, movies."Title"),
+           "Year" = COALESCE($3, movies."Year"),
+           "Runtime" = COALESCE($4, movies."Runtime"),
+           "Genre" = COALESCE($5, movies."Genre"),
+           "Director" = COALESCE($6, movies."Director")
        RETURNING *`,
       [imdbID, Title, Year, Runtime, Genre, Director]
     );
@@ -62,11 +62,11 @@ export const deleteMovie = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
     const result = await pool.query(
-      `INSERT INTO deleted_movies (imdb_id)
+      `INSERT INTO deleted_movies ("imdbID")
        VALUES ($1)
-       ON CONFLICT (imdb_id) DO NOTHING
+       ON CONFLICT ("imdbID") DO NOTHING
        RETURNING *`,
-       [imdbID]
+      [imdbID]
     );
 
     res.json(result.rows[0]);
@@ -83,14 +83,14 @@ export const searchMovies = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Title is required" });
     }
 
-    const deleted = await pool.query("SELECT imdb_id FROM deleted_movies");
-    const deletedIds = deleted.rows.map(r => r.imdb_id);
+    const deleted = await pool.query(`SELECT "imdbID" FROM deleted_movies`);
+    const deletedIds = deleted.rows.map((r) => r.imdbID);
 
     const response = await axios.get("http://www.omdbapi.com/", {
       params: {
         apikey: process.env.OMDB_API_KEY,
-        s: title
-      }
+        s: title,
+      },
     });
 
     const filteredResults = response.data.Search.filter(
@@ -109,9 +109,9 @@ export const addFavorites = async (req: Request, res: Response) => {
     const { imdbID, Title, Year, Poster } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO favorites (imdb_id, title, year, poster)
+      `INSERT INTO favorites ("imdbID", "Title", "Year", "Poster")
        VALUES ($1, $2, $3, $4)
-       ON CONFLICT (imdb_id) DO NOTHING
+       ON CONFLICT ("imdbID") DO NOTHING
        RETURNING *`,
       [imdbID, Title, Year, Poster]
     );
@@ -143,7 +143,7 @@ export const deleteFavorite = async (req: Request, res: Response) => {
 
     const result = await pool.query(
       `DELETE FROM favorites
-       WHERE imdb_id = $1
+       WHERE "imdbID" = $1
        RETURNING *`,
       [imdbID]
     );
@@ -161,29 +161,26 @@ export const deleteFavorite = async (req: Request, res: Response) => {
 
 export const showMovieInfo = async (req: Request, res: Response) => {
   try {
-     const { imdbID } = req.params;
-     const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
+    const { imdbID } = req.params;
+    const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
       params: {
         apikey: process.env.OMDB_API_KEY,
-        i: imdbID
-      }
+        i: imdbID,
+      },
     });
 
-    const { rows } = await pool.query(
-      `SELECT * FROM movies WHERE imdb_id = $1`,
-      [imdbID]
-    );
+    const { rows } = await pool.query(`SELECT * FROM movies WHERE "imdbID" = $1`, [imdbID]);
 
     if (rows.length > 0) {
       const dbMovie = rows[0];
       const merged = {
         ...omdbData,
-        Title: dbMovie.title ?? omdbData.Title,
-        Year: dbMovie.year ?? omdbData.Year,
-        Runtime: dbMovie.runtime ?? omdbData.Runtime,
-        Genre: dbMovie.genre ?? omdbData.Genre,
-        Director: dbMovie.director ?? omdbData.Director,
-        imdbID: dbMovie.imdb_id ?? omdbData.imdbID
+        Title: dbMovie.Title ?? omdbData.Title,
+        Year: dbMovie.Year ?? omdbData.Year,
+        Runtime: dbMovie.Runtime ?? omdbData.Runtime,
+        Genre: dbMovie.Genre ?? omdbData.Genre,
+        Director: dbMovie.Director ?? omdbData.Director,
+        imdbID: dbMovie.imdbID ?? omdbData.imdbID,
       };
       return res.json(merged);
     }
@@ -193,4 +190,4 @@ export const showMovieInfo = async (req: Request, res: Response) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
   }
-}; 
+};
