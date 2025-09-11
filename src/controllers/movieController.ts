@@ -5,7 +5,7 @@ import { Search } from "../types/movies";
 
 export const createMovie = async (req: Request, res: Response) => {
   try {
-    const { imdbID, Title, Year, Runtime, Genre, Director } = req.body;
+    const { imdbID, Title, Year, Runtime, Genre, Director, isFavorite } = req.body;
 
     const response = await axios.get("http://www.omdbapi.com/", {
       params: {
@@ -15,11 +15,11 @@ export const createMovie = async (req: Request, res: Response) => {
     });
 
     const result = await pool.query(
-      `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID")
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID", "isFavorite")
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT ("imdbID") DO NOTHING
        RETURNING *`,
-      [Title, Year, Runtime, Genre, Director, imdbID]
+      [Title, Year, Runtime, Genre, Director, imdbID, isFavorite]
     );
 
     if (result.rows.length === 0 || response.data.Response === "True") {
@@ -36,19 +36,20 @@ export const createMovie = async (req: Request, res: Response) => {
 export const editMovie = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
-    const { Title, Year, Runtime, Genre, Director } = req.body;
+    const { Title, Year, Runtime, Genre, Director, isFavorite } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director")
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite")
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT ("imdbID") DO UPDATE
        SET "Title" = COALESCE($2, movies."Title"),
            "Year" = COALESCE($3, movies."Year"),
            "Runtime" = COALESCE($4, movies."Runtime"),
            "Genre" = COALESCE($5, movies."Genre"),
-           "Director" = COALESCE($6, movies."Director")
+           "Director" = COALESCE($6, movies."Director"),
+           "isFavorite" = COALESCE($7, movies."isFavorite")
        RETURNING *`,
-      [imdbID, Title, Year, Runtime, Genre, Director]
+      [imdbID, Title, Year, Runtime, Genre, Director, isFavorite]
     );
 
     res.json(result.rows[0]);
@@ -104,28 +105,6 @@ export const searchMovies = async (req: Request, res: Response) => {
   }
 };
 
-export const addFavorites = async (req: Request, res: Response) => {
-  try {
-    const { imdbID, Title, Year, Poster } = req.body;
-
-    const result = await pool.query(
-      `INSERT INTO favorites ("imdbID", "Title", "Year", "Poster")
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT ("imdbID") DO NOTHING
-       RETURNING *`,
-      [imdbID, Title, Year, Poster]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(409).json({ error: "Movie already exists in favorites" });
-    }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Database error" });
-  }
-};
 
 export const showAllFavorites = async (_req: Request, res: Response) => {
   try {
@@ -134,28 +113,6 @@ export const showAllFavorites = async (_req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
-  }
-};
-
-export const deleteFavorite = async (req: Request, res: Response) => {
-  try {
-    const { imdbID } = req.params;
-
-    const result = await pool.query(
-      `DELETE FROM favorites
-       WHERE "imdbID" = $1
-       RETURNING *`,
-      [imdbID]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Movie not found" });
-    }
-
-    res.json({ message: "Movie deleted", movie: result.rows[0] });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
   }
 };
 

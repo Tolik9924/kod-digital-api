@@ -1,8 +1,6 @@
 import { Router } from "express";
 import {
-  addFavorites,
   createMovie,
-  deleteFavorite,
   deleteMovie,
   editMovie,
   searchMovies,
@@ -23,9 +21,7 @@ router.delete("/:imdbID", deleteMovie);
 
 router.get("/search", searchMovies);
 
-router.post("/favorites", addFavorites);
 router.get("/favorites", showAllFavorites);
-router.delete("/favorites/:imdbID", deleteFavorite);
 router.get("/movie-info/:imdbID", showMovieInfo);
 
 export default router;
