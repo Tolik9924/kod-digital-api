@@ -8,6 +8,10 @@ export type Search = {
   Poster: string;
 };
 
+export type SearchResult = Search & {
+  isFavorite: boolean;
+};
+
 export type AddingMovie = {
   imdbID: string;
   Title: string;

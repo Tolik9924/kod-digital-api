@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Request, Response } from "express";
 import pool from "../db";
-import { Search } from "../types/movies";
+import { AddingMovie, Search } from "../types/movies";
 
 export const createMovie = async (req: Request, res: Response) => {
   try {
@@ -36,20 +36,21 @@ export const createMovie = async (req: Request, res: Response) => {
 export const editMovie = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
-    const { Title, Year, Runtime, Genre, Director, isFavorite } = req.body;
+    const { Title, Year, Runtime, Genre, Director, isFavorite, Poster } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite")
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT ("imdbID") DO UPDATE
        SET "Title" = COALESCE($2, movies."Title"),
            "Year" = COALESCE($3, movies."Year"),
            "Runtime" = COALESCE($4, movies."Runtime"),
            "Genre" = COALESCE($5, movies."Genre"),
            "Director" = COALESCE($6, movies."Director"),
-           "isFavorite" = COALESCE($7, movies."isFavorite")
+           "isFavorite" = COALESCE($7, movies."isFavorite"),
+           "Poster" = COALESCE($8, movies."Poster")
        RETURNING *`,
-      [imdbID, Title, Year, Runtime, Genre, Director, isFavorite]
+      [imdbID, Title, Year, Runtime, Genre, Director, isFavorite, Poster]
     );
 
     res.json(result.rows[0]);
@@ -85,6 +86,8 @@ export const searchMovies = async (req: Request, res: Response) => {
     }
 
     const deleted = await pool.query(`SELECT "imdbID" FROM deleted_movies`);
+    const movies = await pool.query(`SELECT * FROM movies WHERE "Title" ILIKE $1`, [`%${title}%`]);
+
     const deletedIds = deleted.rows.map((r) => r.imdbID);
 
     const response = await axios.get("http://www.omdbapi.com/", {
@@ -98,13 +101,19 @@ export const searchMovies = async (req: Request, res: Response) => {
       (movie: Search) => !deletedIds.includes(movie.imdbID)
     );
 
-    res.json(filteredResults);
+    const result = filteredResults.map((item: AddingMovie) => {
+      const localMovie = movies.rows.find((m) => m.imdbID === item.imdbID);
+      return localMovie
+        ? { ...item, isFavorite: localMovie.isFavorite }
+        : { ...item, isFavorite: false };
+    });
+
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 };
-
 
 export const showAllFavorites = async (_req: Request, res: Response) => {
   try {
