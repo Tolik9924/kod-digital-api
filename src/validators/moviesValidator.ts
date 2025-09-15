@@ -11,7 +11,7 @@ export const validateCreateMovie = (data: AddingMovie, isEdit: boolean = false):
   const maxRuntime = 600;
 
   const isValidYear = (yearStr: string) => /^\d{4}(?:[-–—]\d{4})?$/.test(yearStr);
-  const isValidRuntime = (runtimeStr: string) => /^\d+\s*min$/.test(runtimeStr);
+  const isValidRuntime = (runtimeStr: string) => /^\d+\s{1}min$/.test(runtimeStr);
   const isValidGenre = (genre: string) => /^[a-zA-Z]+(?:, [a-zA-Z]+)*$/.test(genre);
   const parseYearRange = (yearStr: string) =>
     yearStr.includes("-")
@@ -46,7 +46,9 @@ export const validateCreateMovie = (data: AddingMovie, isEdit: boolean = false):
   }
 
   if (Runtime && !isValidRuntime(Runtime)) {
-    errors.push("Runtime must be in the format 'N' | 'NN' | 'NNN' min");
+    errors.push(
+      "Runtime must be in the format 'N' | 'NN' | 'NNN' min. Between number and text must be one space."
+    );
   }
 
   if (Runtime) {

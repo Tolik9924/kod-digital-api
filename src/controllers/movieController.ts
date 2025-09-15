@@ -63,15 +63,29 @@ export const editMovie = async (req: Request, res: Response) => {
 export const deleteMovie = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
-    const result = await pool.query(
-      `INSERT INTO deleted_movies ("imdbID")
+
+    await pool.query(`DELETE FROM movies WHERE "imdbID" = $1`, [imdbID]);
+
+    const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
+      params: {
+        apikey: process.env.OMDB_API_KEY,
+        i: imdbID,
+      },
+    });
+
+    if (omdbData.Response === "True") {
+      const result = await pool.query(
+        `INSERT INTO deleted_movies ("imdbID")
        VALUES ($1)
        ON CONFLICT ("imdbID") DO NOTHING
        RETURNING *`,
-      [imdbID]
-    );
+        [imdbID]
+      );
 
-    res.json(result.rows[0]);
+      res.json(result.rows[0]);
+    }
+
+    res.json(`Delete data from from table movie: ${imdbID}`);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
