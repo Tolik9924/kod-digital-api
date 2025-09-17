@@ -7,13 +7,6 @@ export const createMovie = async (req: Request, res: Response) => {
   try {
     const { imdbID, Title, Year, Runtime, Genre, Director, isFavorite } = req.body;
 
-    const response = await axios.get("http://www.omdbapi.com/", {
-      params: {
-        apikey: process.env.OMDB_API_KEY,
-        t: Title,
-      },
-    });
-
     const result = await pool.query(
       `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID", "isFavorite")
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -22,11 +15,13 @@ export const createMovie = async (req: Request, res: Response) => {
       [Title, Year, Runtime, Genre, Director, imdbID, isFavorite]
     );
 
-    if (result.rows.length === 0 || response.data.Response === "True") {
+    console.log("RESULT: ", result.rows);
+
+    if (result.rows.length === 0) {
       return res.status(409).json({ error: "Movie already exists." });
     }
 
-    res.json(result.rows[0]);
+    return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
@@ -122,7 +117,7 @@ export const searchMovies = async (req: Request, res: Response) => {
         : { ...item, isFavorite: false };
     });
 
-    res.json(result);
+    res.json([...movies.rows, ...result]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

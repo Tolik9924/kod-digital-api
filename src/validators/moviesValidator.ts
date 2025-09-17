@@ -12,13 +12,16 @@ export const validateCreateMovie = (data: AddingMovie, isEdit: boolean = false):
 
   const isValidYear = (yearStr: string) => /^\d{4}(?:[-–—]\d{4})?$/.test(yearStr);
   const isValidRuntime = (runtimeStr: string) => /^\d+\s{1}min$/.test(runtimeStr);
-  const isValidGenre = (genre: string) => /^[a-zA-Z]+(?:, [a-zA-Z]+)*$/.test(genre);
+  const isValidGenre = (genre: string) =>
+    /^(?:[A-Z][a-z]*|[A-Z]{2,})(?:[-–— ](?:[A-Z][a-z]*|[A-Z]{2,}))*(?:, (?:[A-Z][a-z]*|[A-Z]{2,})(?:[-–— ](?:[A-Z][a-z]*|[A-Z]{2,}))*)*$/.test(
+      genre
+    );
   const parseYearRange = (yearStr: string) =>
     yearStr.includes("-")
       ? yearStr.split("-").map((s) => parseInt(s.trim(), 10))
       : [parseInt(yearStr, 10)];
   const isValidDirector = (name: string) =>
-    /^[A-Z][a-z]*(?:-[A-Z][a-z]*)*(?: [A-Z][a-z]*(?:-[A-Z][a-z]*)*)*$/.test(name);
+    /^[A-Z][a-z]*(?:[-–—][A-Z][a-z]*)*(?: [A-Z][a-z]*(?:[-–—][A-Z][a-z]*)*)*$/.test(name);
   const parseRuntime = (runtime: string) => parseInt(runtime.split(" ")[0]);
 
   const requireField = (field: any, name: string) => {
