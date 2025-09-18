@@ -125,9 +125,16 @@ export const searchMovies = async (req: Request, res: Response) => {
   }
 };
 
-export const showAllFavorites = async (_req: Request, res: Response) => {
+export const showAllFavorites = async (req: Request, res: Response) => {
   try {
-    const result = await pool.query("SELECT * FROM favorites ORDER BY id DESC");
+    const { title } = req.query;
+    if (!title) {
+      return res.status(400).json({ error: "Title is required" });
+    }
+    const result = await pool.query(
+      `SELECT * FROM movies WHERE "Title" ILIKE $1 AND "isFavorite" = TRUE`,
+      [`%${title}%`]
+    );
     res.json(result.rows);
   } catch (err) {
     console.error(err);
