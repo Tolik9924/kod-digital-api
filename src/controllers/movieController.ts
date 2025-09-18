@@ -15,8 +15,6 @@ export const createMovie = async (req: Request, res: Response) => {
       [Title, Year, Runtime, Genre, Director, imdbID, isFavorite]
     );
 
-    console.log("RESULT: ", result.rows);
-
     if (result.rows.length === 0) {
       return res.status(409).json({ error: "Movie already exists." });
     }
@@ -31,11 +29,11 @@ export const createMovie = async (req: Request, res: Response) => {
 export const editMovie = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
-    const { Title, Year, Runtime, Genre, Director, isFavorite, Poster } = req.body;
+    const { Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster", "Type")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT ("imdbID") DO UPDATE
        SET "Title" = COALESCE($2, movies."Title"),
            "Year" = COALESCE($3, movies."Year"),
@@ -43,9 +41,10 @@ export const editMovie = async (req: Request, res: Response) => {
            "Genre" = COALESCE($5, movies."Genre"),
            "Director" = COALESCE($6, movies."Director"),
            "isFavorite" = COALESCE($7, movies."isFavorite"),
-           "Poster" = COALESCE($8, movies."Poster")
+           "Poster" = COALESCE($8, movies."Poster"),
+           "Type" = COALESCE($9, movies."Type")
        RETURNING *`,
-      [imdbID, Title, Year, Runtime, Genre, Director, isFavorite, Poster]
+      [imdbID, Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type]
     );
 
     res.json(result.rows[0]);
@@ -107,7 +106,9 @@ export const searchMovies = async (req: Request, res: Response) => {
     });
 
     const filteredResults = response.data.Search.filter(
-      (movie: Search) => !deletedIds.includes(movie.imdbID)
+      (movie: Search) =>
+        !deletedIds.includes(movie.imdbID) &&
+        !movies.rows.some((item: Search) => item.imdbID === movie.imdbID)
     );
 
     const result = filteredResults.map((item: AddingMovie) => {
