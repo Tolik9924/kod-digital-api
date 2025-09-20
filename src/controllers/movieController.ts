@@ -105,11 +105,14 @@ export const searchMovies = async (req: Request, res: Response) => {
       },
     });
 
-    const filteredResults = response.data.Search.filter(
-      (movie: Search) =>
-        !deletedIds.includes(movie.imdbID) &&
-        !movies.rows.some((item: Search) => item.imdbID === movie.imdbID)
-    );
+    const filteredResults =
+      response.data.Response === "True"
+        ? response.data.Search.filter(
+            (movie: Search) =>
+              !deletedIds.includes(movie.imdbID) &&
+              !movies.rows.some((item: Search) => item.imdbID === movie.imdbID)
+          )
+        : [];
 
     const result = filteredResults.map((item: AddingMovie) => {
       const localMovie = movies.rows.find((m) => m.imdbID === item.imdbID);
