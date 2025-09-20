@@ -76,10 +76,10 @@ export const deleteMovie = async (req: Request, res: Response) => {
         [imdbID]
       );
 
-      res.json(result.rows[0]);
+      return res.json(result.rows[0]);
     }
 
-    res.json(`Delete data from from table movie: ${imdbID}`);
+    return res.json(`Delete data from from table movie: ${imdbID}`);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -159,8 +159,9 @@ export const showMovieInfo = async (req: Request, res: Response) => {
 
     if (rows.length > 0) {
       const dbMovie = rows[0];
+      const addData = typeof omdbData === "string" ? { Response: "False" } : omdbData;
       const merged = {
-        ...omdbData,
+        ...addData,
         Title: dbMovie.Title ?? omdbData.Title,
         Year: dbMovie.Year ?? omdbData.Year,
         Runtime: dbMovie.Runtime ?? omdbData.Runtime,
