@@ -3,16 +3,36 @@ import { Request, Response } from "express";
 import pool from "../db";
 import { AddingMovie, Search } from "../types/movies";
 
+const getUser = async (username: string) => {
+  const userResult = await pool.query("SELECT * FROM Users WHERE username = $1", [username]);
+    let user;
+
+    if (!userResult.rows.length) {
+      const newUser = await pool.query(
+        "INSERT INTO users(username) VALUES($1) RETURNING *",
+        [username]
+      );
+
+      user = newUser.rows[0];
+    } else {
+      user = userResult.rows[0];
+    }
+
+    return user;
+};
+
 export const createMovie = async (req: Request, res: Response) => {
   try {
-    const { imdbID, Title, Year, Runtime, Genre, Director, isFavorite } = req.body;
+    const { username, movie: {imdbID, Title, Year, Runtime, Genre, Director, isFavorite} } = req.body;
+
+    const user = await getUser(username);
 
     const result = await pool.query(
-      `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID", "isFavorite")
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT ("imdbID") DO NOTHING
+      `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID", "isFavorite", "user_id")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT ("imdbID", "user_id") DO NOTHING
        RETURNING *`,
-      [Title, Year, Runtime, Genre, Director, imdbID, isFavorite]
+      [Title, Year, Runtime, Genre, Director, imdbID, isFavorite, user.id]
     );
 
     if (result.rows.length === 0) {
@@ -29,12 +49,14 @@ export const createMovie = async (req: Request, res: Response) => {
 export const editMovie = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
-    const { Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type } = req.body;
+    const { username, movie: {Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type} } = req.body;
+
+    const user = await getUser(username);
 
     const result = await pool.query(
-      `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster", "Type")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       ON CONFLICT ("imdbID") DO UPDATE
+      `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster", "Type", "user_id")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT ("imdbID", "user_id") DO UPDATE
        SET "Title" = COALESCE($2, movies."Title"),
            "Year" = COALESCE($3, movies."Year"),
            "Runtime" = COALESCE($4, movies."Runtime"),
@@ -44,7 +66,7 @@ export const editMovie = async (req: Request, res: Response) => {
            "Poster" = COALESCE($8, movies."Poster"),
            "Type" = COALESCE($9, movies."Type")
        RETURNING *`,
-      [imdbID, Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type]
+      [imdbID, Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type, user.id]
     );
 
     res.json(result.rows[0]);
