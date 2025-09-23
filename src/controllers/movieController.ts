@@ -5,25 +5,27 @@ import { AddingMovie, Search } from "../types/movies";
 
 const getUser = async (username: string) => {
   const userResult = await pool.query("SELECT * FROM Users WHERE username = $1", [username]);
-    let user;
+  let user;
 
-    if (!userResult.rows.length) {
-      const newUser = await pool.query(
-        "INSERT INTO users(username) VALUES($1) RETURNING *",
-        [username]
-      );
+  if (!userResult.rows.length) {
+    const newUser = await pool.query("INSERT INTO users(username) VALUES($1) RETURNING *", [
+      username,
+    ]);
 
-      user = newUser.rows[0];
-    } else {
-      user = userResult.rows[0];
-    }
+    user = newUser.rows[0];
+  } else {
+    user = userResult.rows[0];
+  }
 
-    return user;
+  return user;
 };
 
 export const createMovie = async (req: Request, res: Response) => {
   try {
-    const { username, movie: {imdbID, Title, Year, Runtime, Genre, Director, isFavorite} } = req.body;
+    const {
+      username,
+      movie: { imdbID, Title, Year, Runtime, Genre, Director, isFavorite },
+    } = req.body;
 
     const user = await getUser(username);
 
@@ -49,7 +51,10 @@ export const createMovie = async (req: Request, res: Response) => {
 export const editMovie = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
-    const { username, movie: {Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type} } = req.body;
+    const {
+      username,
+      movie: { Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type },
+    } = req.body;
 
     const user = await getUser(username);
 
@@ -83,7 +88,10 @@ export const deleteMovie = async (req: Request, res: Response) => {
 
     const user = await getUser(username as string);
 
-    await pool.query(`DELETE FROM movies WHERE "imdbID" = $1 AND "user_id" = $2 `, [imdbID, user.id]);
+    await pool.query(`DELETE FROM movies WHERE "imdbID" = $1 AND "user_id" = $2 `, [
+      imdbID,
+      user.id,
+    ]);
 
     const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
       params: {
@@ -94,11 +102,11 @@ export const deleteMovie = async (req: Request, res: Response) => {
 
     if (omdbData.Response === "True") {
       const result = await pool.query(
-        `INSERT INTO deleted_movies ("imdbID")
-       VALUES ($1)
-       ON CONFLICT ("imdbID") DO NOTHING
+        `INSERT INTO deleted_movies ("imdbID", "user_id")
+       VALUES ($1, $2)
+       ON CONFLICT ("imdbID", "user_id") DO NOTHING
        RETURNING *`,
-        [imdbID]
+        [imdbID, user.id]
       );
 
       return res.json(result.rows[0]);
