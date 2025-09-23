@@ -79,8 +79,11 @@ export const editMovie = async (req: Request, res: Response) => {
 export const deleteMovie = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
+    const { username } = req.query;
 
-    await pool.query(`DELETE FROM movies WHERE "imdbID" = $1`, [imdbID]);
+    const user = await getUser(username as string);
+
+    await pool.query(`DELETE FROM movies WHERE "imdbID" = $1 AND "user_id" = $2 `, [imdbID, user.id]);
 
     const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
       params: {
@@ -101,7 +104,7 @@ export const deleteMovie = async (req: Request, res: Response) => {
       return res.json(result.rows[0]);
     }
 
-    return res.json(`Delete data from from table movie: ${imdbID}`);
+    return res.json(`Delete data from from table movie: ${imdbID}, user ${username}`);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

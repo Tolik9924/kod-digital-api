@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 
 export const validate = (validator: (data: any, isEdit: boolean) => string[], isEdit: boolean) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    console.log('REQ BODY: ', req.body);
     const errors = validator(req.body.movie, isEdit);
     if (errors.length > 0) {
       return res.status(400).json({ errors });
