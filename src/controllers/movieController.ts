@@ -21,7 +21,6 @@ const getUser = async (username: string) => {
 };
 
 export const createMovie = async (req: Request, res: Response) => {
-  console.log('WORK CREATE MOVIE');
   try {
     const {
       username,
@@ -36,8 +35,6 @@ export const createMovie = async (req: Request, res: Response) => {
        RETURNING *`,
       [Title, Year, Runtime, Genre, Director, imdbID, isFavorite, user.id]
     );
-
-    console.log('RESULT: ', result.rows[0]);
 
     if (result.rows.length === 0) {
       return res.status(409).json({ error: "Movie already exists." });

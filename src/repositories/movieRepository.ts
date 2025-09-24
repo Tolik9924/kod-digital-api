@@ -1,4 +1,5 @@
 import pool from "../db";
+import { Movie } from "../models/movie";
 
 const getUser = async (username: string) => {
   const userResult = await pool.query("SELECT * FROM Users WHERE username = $1", [username]);
@@ -18,9 +19,19 @@ const getUser = async (username: string) => {
 };
 
 class MovieRepository {
-    async getAll(): Promise<User[]> {
-        const result = await pool.query("SELECT * FROM users ORDER BY id");
-        return result.rows;
+  async create(username: string, movie: Movie): Promise<Movie[]> {
+    const user = await getUser(username);
+    const { Title, Year, Runtime, Genre, Director, imdbID, isFavorite } = movie;
+
+    const result = await pool.query(
+      `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID", "isFavorite", "user_id")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT ("imdbID", "user_id") DO NOTHING
+       RETURNING *`,
+      [Title, Year, Runtime, Genre, Director, imdbID, isFavorite, user.id]
+    );
+
+    return result.rows;
   }
 }
 

@@ -2,6 +2,16 @@ import { GENRE_NAMES } from "../constants/movies";
 
 export type Movie = {
   Title: string;
+  Year: string;
+  Runtime: string;
+  Genre: string;
+  imdbID: string;
+  Director: string;
+  isFavorite: boolean;
+  Poster: string;
+  Type: string;
+  user_id: number;
+  id: number;
 };
 
 export type Search = {
