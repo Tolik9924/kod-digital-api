@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Request, Response } from "express";
 import pool from "../db";
-import { AddingMovie, Search } from "../types/movies";
+import { AddingMovie, Search } from "../models/movie";
 
 const getUser = async (username: string) => {
   const userResult = await pool.query("SELECT * FROM Users WHERE username = $1", [username]);
@@ -21,12 +21,12 @@ const getUser = async (username: string) => {
 };
 
 export const createMovie = async (req: Request, res: Response) => {
+  console.log('WORK CREATE MOVIE');
   try {
     const {
       username,
       movie: { imdbID, Title, Year, Runtime, Genre, Director, isFavorite },
     } = req.body;
-
     const user = await getUser(username);
 
     const result = await pool.query(
@@ -36,6 +36,8 @@ export const createMovie = async (req: Request, res: Response) => {
        RETURNING *`,
       [Title, Year, Runtime, Genre, Director, imdbID, isFavorite, user.id]
     );
+
+    console.log('RESULT: ', result.rows[0]);
 
     if (result.rows.length === 0) {
       return res.status(409).json({ error: "Movie already exists." });

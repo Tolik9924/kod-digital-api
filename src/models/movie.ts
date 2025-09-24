@@ -1,5 +1,9 @@
 import { GENRE_NAMES } from "../constants/movies";
 
+export type Movie = {
+  Title: string;
+};
+
 export type Search = {
   Title: string;
   Year: string;
