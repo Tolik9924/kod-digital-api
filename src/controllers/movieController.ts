@@ -119,7 +119,7 @@ export const deleteMovie = async (req: Request, res: Response) => {
   }
 };
 
-export const searchMovies = async (req: Request, res: Response) => {
+export const searchMovies = async (req: Request, res: Response) => { 
   try {
     const { title } = req.query;
     const { username } = req.body;
@@ -168,13 +168,18 @@ export const searchMovies = async (req: Request, res: Response) => {
 export const showAllFavorites = async (req: Request, res: Response) => {
   try {
     const { title } = req.query;
+    const { username } = req.body;
+
+    const user = await getUser(username);
+
     if (!title) {
       return res.status(400).json({ error: "Title is required" });
     }
     const result = await pool.query(
-      `SELECT * FROM movies WHERE "Title" ILIKE $1 AND "isFavorite" = TRUE`,
-      [`%${title}%`]
+      `SELECT * FROM movies WHERE "Title" ILIKE $1 AND "isFavorite" = TRUE AND "user_id" = $2`,
+      [`%${title}%`, user.id]
     );
+
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -185,6 +190,10 @@ export const showAllFavorites = async (req: Request, res: Response) => {
 export const showMovieInfo = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
+    const { username } = req.body;
+
+    const user = await getUser(username);
+
     const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
       params: {
         apikey: process.env.OMDB_API_KEY,
@@ -192,7 +201,7 @@ export const showMovieInfo = async (req: Request, res: Response) => {
       },
     });
 
-    const { rows } = await pool.query(`SELECT * FROM movies WHERE "imdbID" = $1`, [imdbID]);
+    const { rows } = await pool.query(`SELECT * FROM movies WHERE "imdbID" = $1 AND user_id = $2`, [imdbID, user.id]);
 
     if (rows.length > 0) {
       const dbMovie = rows[0];
