@@ -122,11 +122,15 @@ export const deleteMovie = async (req: Request, res: Response) => {
 export const searchMovies = async (req: Request, res: Response) => {
   try {
     const { title } = req.query;
+    const { username } = req.body;
+
+    const user = await getUser(username);
+
     if (!title) {
       return res.status(400).json({ error: "Title is required" });
     }
 
-    const deleted = await pool.query(`SELECT "imdbID" FROM deleted_movies`);
+    const deleted = await pool.query(`SELECT "imdbID", "user_id" FROM deleted_movies WHERE "user_id" = $1`, [user.id]);
     const movies = await pool.query(`SELECT * FROM movies WHERE "Title" ILIKE $1`, [`%${title}%`]);
 
     const deletedIds = deleted.rows.map((r) => r.imdbID);
