@@ -2,30 +2,11 @@ import axios from "axios";
 import pool from "../db";
 import { AddingMovie, Movie, Search } from "../models/movie";
 
-const getUser = async (username: string) => {
-  const userResult = await pool.query("SELECT * FROM Users WHERE username = $1", [username]);
-  let user;
-
-  if (!userResult.rows.length) {
-    const newUser = await pool.query("INSERT INTO users(username) VALUES($1) RETURNING *", [
-      username,
-    ]);
-
-    user = newUser.rows[0];
-  } else {
-    user = userResult.rows[0];
-  }
-
-  return user;
-};
-
 class MovieRepository {
-  async getMovies(title: string, username: string) {
-    const user = await getUser(username);
-
+  async getMovies(title: string, userId: number) {
     const deleted = await pool.query(
       `SELECT "imdbID", "user_id" FROM deleted_movies WHERE "user_id" = $1`,
-      [user.id]
+      [userId]
     );
     const movies = await pool.query(`SELECT * FROM movies WHERE "Title" ILIKE $1`, [`%${title}%`]);
 
@@ -57,20 +38,16 @@ class MovieRepository {
     return result;
   }
 
-  async getFavorites(title: string, username: string) {
-    const user = await getUser(username);
-
+  async getFavorites(title: string, userId: number) {
     const result = await pool.query(
       `SELECT * FROM movies WHERE "Title" ILIKE $1 AND "isFavorite" = TRUE AND "user_id" = $2`,
-      [`%${title}%`, user.id]
+      [`%${title}%`, userId]
     );
 
     return result;
   }
 
-  async getMovieInfo(imdbID: string, username: string) {
-    const user = await getUser(username);
-
+  async getMovieInfo(imdbID: string, userId: number) {
     const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
       params: {
         apikey: process.env.OMDB_API_KEY,
@@ -80,7 +57,7 @@ class MovieRepository {
 
     const { rows } = await pool.query(`SELECT * FROM movies WHERE "imdbID" = $1 AND user_id = $2`, [
       imdbID,
-      user.id,
+      userId,
     ]);
 
     if (rows.length > 0) {
@@ -101,8 +78,7 @@ class MovieRepository {
     return omdbData;
   }
 
-  async create(username: string, movie: Movie): Promise<Movie[]> {
-    const user = await getUser(username);
+  async create(userId: number, movie: Movie): Promise<Movie[]> {
     const { Title, Year, Runtime, Genre, Director, imdbID, isFavorite } = movie;
 
     const result = await pool.query(
@@ -110,14 +86,13 @@ class MovieRepository {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT ("imdbID", "user_id") DO NOTHING
        RETURNING *`,
-      [Title, Year, Runtime, Genre, Director, imdbID, isFavorite, user.id]
+      [Title, Year, Runtime, Genre, Director, imdbID, isFavorite, userId]
     );
 
     return result.rows;
   }
 
-  async update(username: string, movie: Movie) {
-    const user = await getUser(username);
+  async update(userId: number, movie: Movie) {
     const { Title, Year, Runtime, Genre, Director, imdbID, Poster, Type, isFavorite } = movie;
 
     const result = await pool.query(
@@ -133,18 +108,16 @@ class MovieRepository {
            "Poster" = COALESCE($8, movies."Poster"),
            "Type" = COALESCE($9, movies."Type")
        RETURNING *`,
-      [imdbID, Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type, user.id]
+      [imdbID, Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type, userId]
     );
 
     return result.rows;
   }
 
-  async delete(username: string, imdbID: string) {
-    const user = await getUser(username as string);
-
+  async delete(userId: number, imdbID: string) {
     await pool.query(`DELETE FROM movies WHERE "imdbID" = $1 AND "user_id" = $2 `, [
       imdbID,
-      user.id,
+      userId,
     ]);
 
     const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
@@ -160,11 +133,11 @@ class MovieRepository {
        VALUES ($1, $2)
        ON CONFLICT ("imdbID", "user_id") DO NOTHING
        RETURNING *`,
-        [imdbID, user.id]
+        [imdbID, userId]
       );
     }
 
-    return `Delete data from from table movie: ${imdbID}, user ${username}`;
+    return "Deleted";
   }
 }
 
