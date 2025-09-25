@@ -1,6 +1,6 @@
 import axios from "axios";
 import pool from "../db";
-import { Movie } from "../models/movie";
+import { AddingMovie, Movie, Search } from "../models/movie";
 
 const getUser = async (username: string) => {
   const userResult = await pool.query("SELECT * FROM Users WHERE username = $1", [username]);
@@ -20,6 +20,87 @@ const getUser = async (username: string) => {
 };
 
 class MovieRepository {
+  async getMovies(title: string, username: string) {
+    const user = await getUser(username);
+
+    const deleted = await pool.query(
+      `SELECT "imdbID", "user_id" FROM deleted_movies WHERE "user_id" = $1`,
+      [user.id]
+    );
+    const movies = await pool.query(`SELECT * FROM movies WHERE "Title" ILIKE $1`, [`%${title}%`]);
+
+    const deletedIds = deleted.rows.map((r) => r.imdbID);
+
+    const response = await axios.get("http://www.omdbapi.com/", {
+      params: {
+        apikey: process.env.OMDB_API_KEY,
+        s: title,
+      },
+    });
+
+    const filteredResults =
+      response.data.Response === "True"
+        ? response.data.Search.filter(
+            (movie: Search) =>
+              !deletedIds.includes(movie.imdbID) &&
+              !movies.rows.some((item: Search) => item.imdbID === movie.imdbID)
+          )
+        : [];
+
+    const result = filteredResults.map((item: AddingMovie) => {
+      const localMovie = movies.rows.find((m) => m.imdbID === item.imdbID);
+      return localMovie
+        ? { ...item, isFavorite: localMovie.isFavorite }
+        : { ...item, isFavorite: false };
+    });
+
+    return result;
+  }
+
+  async getFavorites(title: string, username: string) {
+    const user = await getUser(username);
+
+    const result = await pool.query(
+      `SELECT * FROM movies WHERE "Title" ILIKE $1 AND "isFavorite" = TRUE AND "user_id" = $2`,
+      [`%${title}%`, user.id]
+    );
+
+    return result;
+  }
+
+  async getMovieInfo(imdbID: string, username: string) {
+    const user = await getUser(username);
+
+    const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
+      params: {
+        apikey: process.env.OMDB_API_KEY,
+        i: imdbID,
+      },
+    });
+
+    const { rows } = await pool.query(`SELECT * FROM movies WHERE "imdbID" = $1 AND user_id = $2`, [
+      imdbID,
+      user.id,
+    ]);
+
+    if (rows.length > 0) {
+      const dbMovie = rows[0];
+      const addData = typeof omdbData === "string" ? { Response: "False" } : omdbData;
+      const merged = {
+        ...addData,
+        Title: dbMovie.Title ?? omdbData.Title,
+        Year: dbMovie.Year ?? omdbData.Year,
+        Runtime: dbMovie.Runtime ?? omdbData.Runtime,
+        Genre: dbMovie.Genre ?? omdbData.Genre,
+        Director: dbMovie.Director ?? omdbData.Director,
+        imdbID: dbMovie.imdbID ?? omdbData.imdbID,
+      };
+      return merged;
+    }
+
+    return omdbData;
+  }
+
   async create(username: string, movie: Movie): Promise<Movie[]> {
     const user = await getUser(username);
     const { Title, Year, Runtime, Genre, Director, imdbID, isFavorite } = movie;
@@ -74,7 +155,7 @@ class MovieRepository {
     });
 
     if (omdbData.Response === "True") {
-      const result = await pool.query(
+      await pool.query(
         `INSERT INTO deleted_movies ("imdbID", "user_id")
        VALUES ($1, $2)
        ON CONFLICT ("imdbID", "user_id") DO NOTHING
@@ -82,6 +163,8 @@ class MovieRepository {
         [imdbID, user.id]
       );
     }
+
+    return `Delete data from from table movie: ${imdbID}, user ${username}`;
   }
 }
 
