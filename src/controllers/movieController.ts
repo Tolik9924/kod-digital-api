@@ -2,6 +2,11 @@ import axios from "axios";
 import { Request, Response } from "express";
 import pool from "../db";
 import { AddingMovie, Search } from "../models/movie";
+import UserService from "../services/userService";
+import MovieService from "../services/movieService";
+
+const userService = new UserService();
+const movieService = new MovieService();
 
 const getUser = async (username: string) => {
   const userResult = await pool.query("SELECT * FROM Users WHERE username = $1", [username]);
@@ -123,44 +128,13 @@ export const searchMovies = async (req: Request, res: Response) => {
     const { title } = req.query;
     const { username } = req.body;
 
-    const user = await getUser(username);
-
     if (!title) {
       return res.status(400).json({ error: "Title is required" });
     }
 
-    const deleted = await pool.query(
-      `SELECT "imdbID", "user_id" FROM deleted_movies WHERE "user_id" = $1`,
-      [user.id]
-    );
-    const movies = await pool.query(`SELECT * FROM movies WHERE "Title" ILIKE $1`, [`%${title}%`]);
-
-    const deletedIds = deleted.rows.map((r) => r.imdbID);
-
-    const response = await axios.get("http://www.omdbapi.com/", {
-      params: {
-        apikey: process.env.OMDB_API_KEY,
-        s: title,
-      },
-    });
-
-    const filteredResults =
-      response.data.Response === "True"
-        ? response.data.Search.filter(
-            (movie: Search) =>
-              !deletedIds.includes(movie.imdbID) &&
-              !movies.rows.some((item: Search) => item.imdbID === movie.imdbID)
-          )
-        : [];
-
-    const result = filteredResults.map((item: AddingMovie) => {
-      const localMovie = movies.rows.find((m) => m.imdbID === item.imdbID);
-      return localMovie
-        ? { ...item, isFavorite: localMovie.isFavorite }
-        : { ...item, isFavorite: false };
-    });
-
-    res.json([...movies.rows, ...result]);
+    const user = await userService.getUser(username);
+    const result = await movieService.getMovies(title as string, user.id);
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

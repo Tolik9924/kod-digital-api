@@ -35,7 +35,7 @@ class MovieRepository {
         : { ...item, isFavorite: false };
     });
 
-    return result;
+    return [...movies.rows, ...result];
   }
 
   async getFavorites(title: string, userId: number) {
