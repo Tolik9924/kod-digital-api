@@ -24,8 +24,8 @@ class MovieService {
     return createdMovie;
   }
 
-  async editMovie(userId: number, movie: Movie) {
-    const editdMovie = movieRepo.update(userId, movie);
+  async editMovie(userId: number, imdbID: string, movie: Movie) {
+    const editdMovie = movieRepo.update(userId, imdbID, movie);
     return editdMovie;
   }
 

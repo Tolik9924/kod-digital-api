@@ -44,7 +44,7 @@ class MovieRepository {
       [`%${title}%`, userId]
     );
 
-    return result;
+    return result.rows;
   }
 
   async getMovieInfo(imdbID: string, userId: number) {
@@ -92,8 +92,8 @@ class MovieRepository {
     return result.rows;
   }
 
-  async update(userId: number, movie: Movie) {
-    const { Title, Year, Runtime, Genre, Director, imdbID, Poster, Type, isFavorite } = movie;
+  async update(userId: number, imdbID: string, movie: Movie) {
+    const { Title, Year, Runtime, Genre, Director, Poster, Type, isFavorite } = movie;
 
     const result = await pool.query(
       `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster", "Type", "user_id")

@@ -1,7 +1,6 @@
 import axios from "axios";
 import { Request, Response } from "express";
 import pool from "../db";
-import { AddingMovie, Search } from "../models/movie";
 import UserService from "../services/userService";
 import MovieService from "../services/movieService";
 
@@ -27,25 +26,10 @@ const getUser = async (username: string) => {
 
 export const createMovie = async (req: Request, res: Response) => {
   try {
-    const {
-      username,
-      movie: { imdbID, Title, Year, Runtime, Genre, Director, isFavorite },
-    } = req.body;
-    const user = await getUser(username);
-
-    const result = await pool.query(
-      `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID", "isFavorite", "user_id")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       ON CONFLICT ("imdbID", "user_id") DO NOTHING
-       RETURNING *`,
-      [Title, Year, Runtime, Genre, Director, imdbID, isFavorite, user.id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(409).json({ error: "Movie already exists." });
-    }
-
-    return res.json(result.rows[0]);
+    const { username, movie } = req.body;
+    const user = await userService.getUser(username);
+    const createdMovie = await movieService.createMovie(user.id, movie);
+    return res.json(createdMovie);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
@@ -55,30 +39,10 @@ export const createMovie = async (req: Request, res: Response) => {
 export const editMovie = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
-    const {
-      username,
-      movie: { Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type },
-    } = req.body;
-
-    const user = await getUser(username);
-
-    const result = await pool.query(
-      `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster", "Type", "user_id")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       ON CONFLICT ("imdbID", "user_id") DO UPDATE
-       SET "Title" = COALESCE($2, movies."Title"),
-           "Year" = COALESCE($3, movies."Year"),
-           "Runtime" = COALESCE($4, movies."Runtime"),
-           "Genre" = COALESCE($5, movies."Genre"),
-           "Director" = COALESCE($6, movies."Director"),
-           "isFavorite" = COALESCE($7, movies."isFavorite"),
-           "Poster" = COALESCE($8, movies."Poster"),
-           "Type" = COALESCE($9, movies."Type")
-       RETURNING *`,
-      [imdbID, Title, Year, Runtime, Genre, Director, isFavorite, Poster, Type, user.id]
-    );
-
-    res.json(result.rows[0]);
+    const { username, movie } = req.body;
+    const user = await userService.getUser(username);
+    const updatedMovie = await movieService.editMovie(user.id, imdbID, movie);
+    res.json(updatedMovie);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
@@ -89,34 +53,9 @@ export const deleteMovie = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
     const { username } = req.query;
-
-    const user = await getUser(username as string);
-
-    await pool.query(`DELETE FROM movies WHERE "imdbID" = $1 AND "user_id" = $2 `, [
-      imdbID,
-      user.id,
-    ]);
-
-    const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
-      params: {
-        apikey: process.env.OMDB_API_KEY,
-        i: imdbID,
-      },
-    });
-
-    if (omdbData.Response === "True") {
-      const result = await pool.query(
-        `INSERT INTO deleted_movies ("imdbID", "user_id")
-       VALUES ($1, $2)
-       ON CONFLICT ("imdbID", "user_id") DO NOTHING
-       RETURNING *`,
-        [imdbID, user.id]
-      );
-
-      return res.json(result.rows[0]);
-    }
-
-    return res.json(`Delete data from from table movie: ${imdbID}, user ${username}`);
+    const user = await userService.getUser(username as string);
+    const deleted = await movieService.deleteMovie(user.id, imdbID);
+    return res.json(deleted);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -146,17 +85,14 @@ export const showAllFavorites = async (req: Request, res: Response) => {
     const { title } = req.query;
     const { username } = req.body;
 
-    const user = await getUser(username);
+    const user = await userService.getUser(username);
 
     if (!title) {
       return res.status(400).json({ error: "Title is required" });
     }
-    const result = await pool.query(
-      `SELECT * FROM movies WHERE "Title" ILIKE $1 AND "isFavorite" = TRUE AND "user_id" = $2`,
-      [`%${title}%`, user.id]
-    );
+    const favorites = await movieService.getFavorites(title as string, user.id);
 
-    res.json(result.rows);
+    res.json(favorites);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
