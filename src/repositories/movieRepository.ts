@@ -1,21 +1,31 @@
 import axios from "axios";
 import pool from "../db";
-import { researchCache } from "./cache";
+import { favoritesCache, movieInfoCache, researchCache } from "./cache";
 import { AddingMovie, Movie, Search } from "../models/movie";
 
 class MovieRepository {
   async getMovies(title: string, userId: number) {
     const key = `search:user:${userId}:${title}`;
 
-    const cached = researchCache.get(key);
-    console.log("CACHED GET MOVIES: ", cached);
+    const cached = await researchCache.get(key);
+    console.log("CACHED: ", cached);
     if (cached) return cached;
+
+    const userCacheKey = await pool.query(
+      `INSERT INTO cache_keys_search ("cache_key", "user_id")
+       VALUES ($1, $2)
+       ON CONFLICT ("cache_key", "user_id") DO NOTHING
+       RETURNING *`,
+      [key, userId]
+    );
+
+    console.log("USER CACHE KEY: ", userCacheKey.rows);
 
     const deleted = await pool.query(
       `SELECT "imdbID", "user_id" FROM deleted_movies WHERE "user_id" = $1`,
       [userId]
     );
-    const movies = await pool.query(`SELECT * FROM movies WHERE "Title" ILIKE $1`, [`%${title}%`]);
+    const movies = await pool.query(`SELECT * FROM movies WHERE "Title" ~* $1`, [`\\y${title}\\y`]);
 
     const deletedIds = deleted.rows.map((r) => r.imdbID);
 
@@ -42,21 +52,32 @@ class MovieRepository {
         : { ...item, isFavorite: false };
     });
 
-    researchCache.set(key, result);
+    researchCache.set(key, [...movies.rows, ...result]);
 
     return [...movies.rows, ...result];
   }
 
   async getFavorites(title: string, userId: number) {
+    const key = `favorites:user:${userId}:${title}`;
+    const cached = favoritesCache.get(key);
+    if (cached) return cached;
+
     const result = await pool.query(
-      `SELECT * FROM movies WHERE "Title" ILIKE $1 AND "isFavorite" = TRUE AND "user_id" = $2`,
-      [`%${title}%`, userId]
+      `SELECT * FROM movies WHERE "Title" ~* $1 AND "isFavorite" = TRUE AND "user_id" = $2`,
+      [`\\y${title}\\y`, userId]
     );
+
+    favoritesCache.set(key, result.rows);
 
     return result.rows;
   }
 
   async getMovieInfo(imdbID: string, userId: number) {
+    const key = `movieInfo:user:${userId}:imdbID:${imdbID}`;
+
+    const cached = movieInfoCache.get(key);
+    if (cached) return cached;
+
     const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
       params: {
         apikey: process.env.OMDB_API_KEY,
@@ -71,7 +92,8 @@ class MovieRepository {
 
     if (rows.length > 0) {
       const dbMovie = rows[0];
-      const addData = typeof omdbData === "string" ? { Response: "False" } : omdbData;
+      const addData =
+        typeof omdbData === "string" ? { Response: "False" } : { Response: omdbData.Response };
       const merged = {
         ...addData,
         Title: dbMovie.Title ?? omdbData.Title,
@@ -81,14 +103,23 @@ class MovieRepository {
         Director: dbMovie.Director ?? omdbData.Director,
         imdbID: dbMovie.imdbID ?? omdbData.imdbID,
       };
+      movieInfoCache.set(key, merged);
       return merged;
     }
+
+    movieInfoCache.set(key, omdbData);
 
     return omdbData;
   }
 
   async create(userId: number, movie: Movie): Promise<Movie[]> {
     const { Title, Year, Runtime, Genre, Director, imdbID, isFavorite } = movie;
+
+    const userCache = await pool.query(`SELECT * FROM cache_keys_search WHERE "user_id" = $1`, [
+      userId,
+    ]);
+
+    researchCache.set(userCache.rows[0].cache_key, undefined);
 
     const result = await pool.query(
       `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID", "isFavorite", "user_id")
@@ -97,7 +128,6 @@ class MovieRepository {
        RETURNING *`,
       [Title, Year, Runtime, Genre, Director, imdbID, isFavorite, userId]
     );
-
     return result.rows;
   }
 
