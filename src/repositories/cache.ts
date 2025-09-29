@@ -7,17 +7,12 @@ class Cache<T> {
 
   async get(key: string): Promise<T | undefined> {
     const data = this.store.get(key);
-    console.log("DATA CACHE: ", data);
-    if (!data) return undefined;
+    if (!data) {
+      await pool.query(`DELETE FROM cache_keys_search WHERE "cache_key" = $1`, [key]);
+      return undefined;
+    }
     if (Date.now() > data.expires) {
       this.store.delete(key);
-      console.log("KEY: ", key);
-      const deleted = await pool.query(`DELETE FROM cache_keys_search WHERE "cache_key" = $1`, [
-        key,
-      ]);
-
-      console.log("DELETED: ", deleted);
-
       return undefined;
     }
     return data.value;

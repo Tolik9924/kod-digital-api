@@ -8,18 +8,16 @@ class MovieRepository {
     const key = `search:user:${userId}:${title}`;
 
     const cached = await researchCache.get(key);
-    console.log("CACHED: ", cached);
     if (cached) return cached;
 
-    const userCacheKey = await pool.query(
-      `INSERT INTO cache_keys_search ("cache_key", "user_id")
-       VALUES ($1, $2)
+    const expiresAt = new Date(Date.now() + 60_000);
+    await pool.query(
+      `INSERT INTO cache_keys_search ("cache_key", "user_id", "expires_at")
+       VALUES ($1, $2, $3)
        ON CONFLICT ("cache_key", "user_id") DO NOTHING
        RETURNING *`,
-      [key, userId]
+      [key, userId, expiresAt]
     );
-
-    console.log("USER CACHE KEY: ", userCacheKey.rows);
 
     const deleted = await pool.query(
       `SELECT "imdbID", "user_id" FROM deleted_movies WHERE "user_id" = $1`,
@@ -115,11 +113,11 @@ class MovieRepository {
   async create(userId: number, movie: Movie): Promise<Movie[]> {
     const { Title, Year, Runtime, Genre, Director, imdbID, isFavorite } = movie;
 
-    const userCache = await pool.query(`SELECT * FROM cache_keys_search WHERE "user_id" = $1`, [
-      userId,
-    ]);
+    // const userCache = await pool.query(`SELECT * FROM cache_keys_search WHERE "user_id" = $1`, [
+    //   userId,
+    // ]);
 
-    researchCache.set(userCache.rows[0].cache_key, undefined);
+    // researchCache.set(userCache.rows[0].cache_key, undefined);
 
     const result = await pool.query(
       `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID", "isFavorite", "user_id")
