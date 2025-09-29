@@ -1,9 +1,16 @@
 import axios from "axios";
 import pool from "../db";
+import { researchCache } from "./cache";
 import { AddingMovie, Movie, Search } from "../models/movie";
 
 class MovieRepository {
   async getMovies(title: string, userId: number) {
+    const key = `search:user:${userId}:${title}`;
+
+    const cached = researchCache.get(key);
+    console.log("CACHED GET MOVIES: ", cached);
+    if (cached) return cached;
+
     const deleted = await pool.query(
       `SELECT "imdbID", "user_id" FROM deleted_movies WHERE "user_id" = $1`,
       [userId]
@@ -34,6 +41,8 @@ class MovieRepository {
         ? { ...item, isFavorite: localMovie.isFavorite }
         : { ...item, isFavorite: false };
     });
+
+    researchCache.set(key, result);
 
     return [...movies.rows, ...result];
   }
