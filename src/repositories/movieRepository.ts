@@ -2,7 +2,7 @@ import axios from "axios";
 import pool from "../db";
 import { favoritesCache, movieInfoCache, researchCache } from "./cache";
 import { AddingMovie, Movie, Search } from "../models/movie";
-
+import { clearCache } from "./utils/clearCache";
 class MovieRepository {
   async getMovies(title: string, userId: number) {
     const key = `search:user:${userId}:${title}`;
@@ -113,11 +113,7 @@ class MovieRepository {
   async create(userId: number, movie: Movie): Promise<Movie[]> {
     const { Title, Year, Runtime, Genre, Director, imdbID, isFavorite } = movie;
 
-    // const userCache = await pool.query(`SELECT * FROM cache_keys_search WHERE "user_id" = $1`, [
-    //   userId,
-    // ]);
-
-    // researchCache.set(userCache.rows[0].cache_key, undefined);
+    await clearCache(userId);
 
     const result = await pool.query(
       `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID", "isFavorite", "user_id")
@@ -131,6 +127,8 @@ class MovieRepository {
 
   async update(userId: number, imdbID: string, movie: Movie) {
     const { Title, Year, Runtime, Genre, Director, Poster, Type, isFavorite } = movie;
+
+    await clearCache(userId);
 
     const result = await pool.query(
       `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster", "Type", "user_id")
@@ -152,6 +150,8 @@ class MovieRepository {
   }
 
   async delete(userId: number, imdbID: string) {
+    await clearCache(userId);
+
     await pool.query(`DELETE FROM movies WHERE "imdbID" = $1 AND "user_id" = $2 `, [
       imdbID,
       userId,
