@@ -14,7 +14,7 @@ class MovieService {
     return favorites;
   }
 
-  async getMovieInfo(imdbID: string, userId: number) {
+  async getMovieInfo(imdbID: string, userId?: number) {
     const movie = movieRepo.getMovieInfo(imdbID, userId);
     return movie;
   }
@@ -25,8 +25,8 @@ class MovieService {
   }
 
   async editMovie(userId: number, imdbID: string, movie: Movie) {
-    const editdMovie = movieRepo.update(userId, imdbID, movie);
-    return editdMovie;
+    const editMovie = movieRepo.update(userId, imdbID, movie);
+    return editMovie;
   }
 
   async deleteMovie(userId: number, imdbID: string) {

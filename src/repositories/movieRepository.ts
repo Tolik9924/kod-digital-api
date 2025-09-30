@@ -81,18 +81,22 @@ class MovieRepository {
     return result.rows;
   }
 
-  async getMovieInfo(imdbID: string, userId: number) {
-    const key = `movieInfo:user:${userId}:imdbID:${imdbID}`;
-
-    const cached = movieInfoCache.get(key);
-    if (cached) return cached;
-
+  async getMovieInfo(imdbID: string, userId?: number) {
     const { data: omdbData } = await axios.get("http://www.omdbapi.com/", {
       params: {
         apikey: process.env.OMDB_API_KEY,
         i: imdbID,
       },
     });
+
+    if (!userId) {
+      return omdbData;
+    }
+
+    const key = `movieInfo:user:${userId}:imdbID:${imdbID}`;
+
+    const cached = await movieInfoCache.get(key);
+    if (cached) return cached;
 
     const { rows } = await pool.query(`SELECT * FROM movies WHERE "imdbID" = $1 AND user_id = $2`, [
       imdbID,

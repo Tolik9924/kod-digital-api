@@ -83,10 +83,10 @@ export const showAllFavorites = async (req: Request, res: Response) => {
 export const showMovieInfo = async (req: Request, res: Response) => {
   try {
     const { imdbID } = req.params;
-    const { username } = req.body;
+    const { username } = req.query;
 
-    const user = await userService.getUser(username);
-    const movieInfo = await movieService.getMovieInfo(imdbID, user.id);
+    const user = username ? await userService.getUser(username as string) : null;
+    const movieInfo = await movieService.getMovieInfo(imdbID, user?.id);
 
     res.json(movieInfo);
   } catch (err) {
