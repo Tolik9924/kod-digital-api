@@ -4,7 +4,18 @@ import { favoritesCache, movieInfoCache, researchCache } from "./cache";
 import { AddingMovie, Movie, Search } from "../models/movie";
 import { clearCache } from "./utils/clearCache";
 class MovieRepository {
-  async getMovies(title: string, userId: number) {
+  async getMovies(title: string, userId?: number) {
+    if (!userId) {
+      const response = await axios.get("http://www.omdbapi.com/", {
+        params: {
+          apikey: process.env.OMDB_API_KEY,
+          s: title,
+        },
+      });
+
+      return response.data.Search;
+    }
+
     const key = `search:user:${userId}:${title}`;
 
     const cached = await researchCache.get(key);

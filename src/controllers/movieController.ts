@@ -46,14 +46,14 @@ export const deleteMovie = async (req: Request, res: Response) => {
 export const searchMovies = async (req: Request, res: Response) => {
   try {
     const { title } = req.query;
-    const { username } = req.body;
+    const { username } = req.body || {};
 
     if (!title) {
       return res.status(400).json({ error: "Title is required" });
     }
 
-    const user = await userService.getUser(username);
-    const result = await movieService.getMovies(title as string, user.id);
+    const user = username ? await userService.getUser(username) : null;
+    const result = await movieService.getMovies(title as string, user?.id);
     res.json(result);
   } catch (err) {
     console.error(err);
