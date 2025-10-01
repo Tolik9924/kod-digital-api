@@ -1,8 +1,9 @@
 import axios from "axios";
 import pool from "../db";
+import { CACHE_KEYS_FAVORITE, CACHE_KEYS_SEARCH } from "./constants";
 import { favoritesCache, movieInfoCache, researchCache } from "./cache";
 import { AddingMovie, Movie, Search } from "../models/movie";
-import { clearCacheSearch } from "./utils/clearCache";
+import { clearCacheSearch, clearCacheFavorite } from "./utils/clearCache";
 class MovieRepository {
   async getMovies(title: string, userId?: number) {
     if (!userId) {
@@ -18,7 +19,7 @@ class MovieRepository {
 
     const key = `search:user:${userId}:${title}`;
 
-    const cached = await researchCache.get(key);
+    const cached = await researchCache.get(key, CACHE_KEYS_SEARCH);
     if (cached) return cached;
 
     const expiresAt = new Date(Date.now() + 60_000);
@@ -71,8 +72,19 @@ class MovieRepository {
 
   async getFavorites(title: string, userId: number) {
     const key = `favorites:user:${userId}:${title}`;
-    const cached = await favoritesCache.get(key);
+    const cached = await favoritesCache.get(key, CACHE_KEYS_FAVORITE);
     if (cached) return cached;
+
+    const expiresAt = new Date(Date.now() + 60_000);
+    const favoritesCacheKey = await pool.query(
+      `INSERT INTO cache_keys_favorites ("cache_key", "user_id", "expires_at")
+       VALUES ($1, $2, $3)
+       ON CONFLICT ("cache_key", "user_id") DO NOTHING
+       RETURNING *`,
+      [key, userId, expiresAt]
+    );
+
+    console.log("FAVORITES CACHE KEY: ", favoritesCacheKey);
 
     const result = await pool.query(
       `SELECT * FROM movies WHERE "Title" ~* $1 AND "isFavorite" = TRUE AND "user_id" = $2`,
@@ -154,6 +166,11 @@ class MovieRepository {
     );
 
     console.log("USER MOVIE: ", userMovie.rows);
+    console.log("USER MOVIE FAVORITE: ", userMovie.rows[0].isFavorite);
+
+    if (isFavorite !== userMovie.rows[0].isFavorite) {
+      clearCacheFavorite(userId);
+    }
 
     const result = await pool.query(
       `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster", "Type", "user_id")
