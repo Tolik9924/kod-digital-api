@@ -1,7 +1,18 @@
 import pool from "../../db";
-import { researchCache } from "../cache";
+import { favoritesCache, researchCache } from "../cache";
 
-export const clearCache = async (userId: number) => {
+export const clearCacheSearch = async (userId: number) => {
   const userKey = await pool.query(`SELECT * FROM cache_keys_search WHERE user_id = $1`, [userId]);
-  researchCache.set(userKey.rows[0].cache_key, undefined);
+  if (userKey.rows[0]) {
+    researchCache.set(userKey.rows[0].cache_key, undefined);
+  }
+};
+
+export const clearCacheFavorite = async (userId: number) => {
+  const userKey = await pool.query(`SELECT * FROM cache_keys_favorites WHERE user_id = $1`, [
+    userId,
+  ]);
+  if (userKey.rows[0]) {
+    favoritesCache.set(userKey.rows[0].cache_key, undefined);
+  }
 };

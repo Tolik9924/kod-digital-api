@@ -13,6 +13,7 @@ class Cache<T> {
     }
     if (Date.now() > data.expires) {
       this.store.delete(key);
+      await pool.query(`DELETE FROM cache_keys_search WHERE "cache_key" = $1`, [key]);
       return undefined;
     }
     return data.value;

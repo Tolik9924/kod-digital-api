@@ -2,7 +2,7 @@ import axios from "axios";
 import pool from "../db";
 import { favoritesCache, movieInfoCache, researchCache } from "./cache";
 import { AddingMovie, Movie, Search } from "../models/movie";
-import { clearCache } from "./utils/clearCache";
+import { clearCacheSearch } from "./utils/clearCache";
 class MovieRepository {
   async getMovies(title: string, userId?: number) {
     if (!userId) {
@@ -34,7 +34,10 @@ class MovieRepository {
       `SELECT "imdbID", "user_id" FROM deleted_movies WHERE "user_id" = $1`,
       [userId]
     );
-    const movies = await pool.query(`SELECT * FROM movies WHERE "Title" ~* $1`, [`\\y${title}\\y`]);
+    const movies = await pool.query(`SELECT * FROM movies WHERE "Title" ~* $1 AND user_id = $2`, [
+      `\\y${title}\\y`,
+      userId,
+    ]);
 
     const deletedIds = deleted.rows.map((r) => r.imdbID);
 
@@ -68,7 +71,7 @@ class MovieRepository {
 
   async getFavorites(title: string, userId: number) {
     const key = `favorites:user:${userId}:${title}`;
-    const cached = favoritesCache.get(key);
+    const cached = await favoritesCache.get(key);
     if (cached) return cached;
 
     const result = await pool.query(
@@ -128,7 +131,7 @@ class MovieRepository {
   async create(userId: number, movie: Movie): Promise<Movie[]> {
     const { Title, Year, Runtime, Genre, Director, imdbID, isFavorite } = movie;
 
-    await clearCache(userId);
+    await clearCacheSearch(userId);
 
     const result = await pool.query(
       `INSERT INTO movies ("Title", "Year", "Runtime", "Genre", "Director", "imdbID", "isFavorite", "user_id")
@@ -143,7 +146,14 @@ class MovieRepository {
   async update(userId: number, imdbID: string, movie: Movie) {
     const { Title, Year, Runtime, Genre, Director, Poster, Type, isFavorite } = movie;
 
-    await clearCache(userId);
+    if (userId) await clearCacheSearch(userId);
+
+    const userMovie = await pool.query(
+      `SELECT * FROM movies WHERE "imdbID" = $1 AND user_id = $2`,
+      [movie.imdbID, userId]
+    );
+
+    console.log("USER MOVIE: ", userMovie.rows);
 
     const result = await pool.query(
       `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster", "Type", "user_id")
@@ -165,7 +175,7 @@ class MovieRepository {
   }
 
   async delete(userId: number, imdbID: string) {
-    await clearCache(userId);
+    await clearCacheSearch(userId);
 
     await pool.query(`DELETE FROM movies WHERE "imdbID" = $1 AND "user_id" = $2 `, [
       imdbID,

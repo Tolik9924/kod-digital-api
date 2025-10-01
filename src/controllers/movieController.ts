@@ -45,14 +45,13 @@ export const deleteMovie = async (req: Request, res: Response) => {
 
 export const searchMovies = async (req: Request, res: Response) => {
   try {
-    const { title } = req.query;
-    const { username } = req.body || {};
+    const { title, username } = req.query;
 
     if (!title) {
       return res.status(400).json({ error: "Title is required" });
     }
 
-    const user = username ? await userService.getUser(username) : null;
+    const user = username ? await userService.getUser(username as string) : null;
     const result = await movieService.getMovies(title as string, user?.id);
     res.json(result);
   } catch (err) {
@@ -63,14 +62,16 @@ export const searchMovies = async (req: Request, res: Response) => {
 
 export const showAllFavorites = async (req: Request, res: Response) => {
   try {
-    const { title } = req.query;
-    const { username } = req.body;
+    const { title, username } = req.query;
+
+    console.log("USERNAME: ", username);
+    console.log("TITLE: ", title);
 
     if (!title) {
       return res.status(400).json({ error: "Title is required" });
     }
 
-    const user = await userService.getUser(username);
+    const user = await userService.getUser(username as string);
     const favorites = await movieService.getFavorites(title as string, user.id);
 
     res.json(favorites);
@@ -86,6 +87,7 @@ export const showMovieInfo = async (req: Request, res: Response) => {
     const { username } = req.query;
 
     const user = username ? await userService.getUser(username as string) : null;
+    console.log("USER: ", user);
     const movieInfo = await movieService.getMovieInfo(imdbID, user?.id);
 
     res.json(movieInfo);
