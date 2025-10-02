@@ -158,6 +158,8 @@ class MovieRepository {
   async update(userId: number, imdbID: string, movie: Movie) {
     const { Title, Year, Runtime, Genre, Director, Poster, Type, isFavorite } = movie;
 
+    console.log("IS FAVORITE: ", isFavorite);
+
     if (userId) await clearCacheSearch(userId);
 
     const userMovie = await pool.query(
@@ -166,11 +168,12 @@ class MovieRepository {
     );
 
     console.log("USER MOVIE: ", userMovie.rows);
-    console.log("USER MOVIE FAVORITE: ", userMovie.rows[0].isFavorite);
 
-    if (isFavorite !== userMovie.rows[0].isFavorite) {
+    if (userMovie.rows[0] && isFavorite !== userMovie.rows[0]?.isFavorite) {
       clearCacheFavorite(userId);
     }
+
+    console.log("USER MOVIE FAVORITE: ", userMovie.rows[0]?.isFavorite);
 
     const result = await pool.query(
       `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster", "Type", "user_id")
