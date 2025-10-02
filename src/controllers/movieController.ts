@@ -64,9 +64,6 @@ export const showAllFavorites = async (req: Request, res: Response) => {
   try {
     const { title, username } = req.query;
 
-    console.log("USERNAME: ", username);
-    console.log("TITLE: ", title);
-
     if (!title) {
       return res.status(400).json({ error: "Title is required" });
     }
@@ -87,7 +84,6 @@ export const showMovieInfo = async (req: Request, res: Response) => {
     const { username } = req.query;
 
     const user = username ? await userService.getUser(username as string) : null;
-    console.log("USER: ", user);
     const movieInfo = await movieService.getMovieInfo(imdbID, user?.id);
 
     res.json(movieInfo);

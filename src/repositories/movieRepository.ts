@@ -84,8 +84,6 @@ class MovieRepository {
       [key, userId, expiresAt]
     );
 
-    console.log("FAVORITES CACHE KEY: ", favoritesCacheKey);
-
     const result = await pool.query(
       `SELECT * FROM movies WHERE "Title" ~* $1 AND "isFavorite" = TRUE AND "user_id" = $2`,
       [`\\y${title}\\y`, userId]
@@ -158,8 +156,6 @@ class MovieRepository {
   async update(userId: number, imdbID: string, movie: Movie) {
     const { Title, Year, Runtime, Genre, Director, Poster, Type, isFavorite } = movie;
 
-    console.log("IS FAVORITE: ", isFavorite);
-
     if (userId) await clearCacheSearch(userId);
 
     const userMovie = await pool.query(
@@ -167,13 +163,9 @@ class MovieRepository {
       [movie.imdbID, userId]
     );
 
-    console.log("USER MOVIE: ", userMovie.rows);
-
     if (userMovie.rows[0] && isFavorite !== userMovie.rows[0]?.isFavorite) {
       clearCacheFavorite(userId);
     }
-
-    console.log("USER MOVIE FAVORITE: ", userMovie.rows[0]?.isFavorite);
 
     const result = await pool.query(
       `INSERT INTO movies ("imdbID", "Title", "Year", "Runtime", "Genre", "Director", "isFavorite", "Poster", "Type", "user_id")

@@ -6,7 +6,6 @@ class Cache<T> {
   constructor(private ttlMs: number) {}
 
   async get(key: string, typeKey?: string): Promise<T | undefined> {
-    console.log("GET STORE MAP: ", this.store);
     const data = this.store.get(key);
     if (!data) {
       if (typeKey) {
@@ -25,7 +24,6 @@ class Cache<T> {
   }
 
   set(key: string, value: T) {
-    console.log("SET STORE MAP: ", this.store);
     this.store.set(key, { value, expires: Date.now() + this.ttlMs });
   }
 }
