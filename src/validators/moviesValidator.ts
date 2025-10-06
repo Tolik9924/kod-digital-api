@@ -1,5 +1,5 @@
 import { GENRE_NAMES } from "../constants/movies";
-import { AddingMovie, GenreName } from "../types/movies";
+import { AddingMovie, GenreName } from "../models/movie";
 
 export const validateCreateMovie = (data: AddingMovie, isEdit: boolean = false): string[] => {
   const errors: string[] = [];
