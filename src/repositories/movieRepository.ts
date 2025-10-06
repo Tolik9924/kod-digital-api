@@ -131,9 +131,6 @@ class MovieRepository {
         imdbID: dbMovie.imdbID ?? omdbData.imdbID,
       };
       movieInfoCache.set(key, merged);
-      console.log("MERGED: ", merged);
-      console.log("DB MOVIE: ", dbMovie);
-      console.log("OMDB DATA: ", omdbData);
       return merged;
     }
 
