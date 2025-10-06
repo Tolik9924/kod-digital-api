@@ -122,6 +122,7 @@ class MovieRepository {
         typeof omdbData === "string" ? { Response: "False" } : { Response: omdbData.Response };
       const merged = {
         ...addData,
+        ...omdbData,
         Title: dbMovie.Title ?? omdbData.Title,
         Year: dbMovie.Year ?? omdbData.Year,
         Runtime: dbMovie.Runtime ?? omdbData.Runtime,
@@ -130,6 +131,9 @@ class MovieRepository {
         imdbID: dbMovie.imdbID ?? omdbData.imdbID,
       };
       movieInfoCache.set(key, merged);
+      console.log("MERGED: ", merged);
+      console.log("DB MOVIE: ", dbMovie);
+      console.log("OMDB DATA: ", omdbData);
       return merged;
     }
 
@@ -155,6 +159,9 @@ class MovieRepository {
 
   async update(userId: number, imdbID: string, movie: Movie) {
     const { Title, Year, Runtime, Genre, Director, Poster, Type, isFavorite } = movie;
+    const key = `movieInfo:user:${userId}:imdbID:${imdbID}`;
+
+    movieInfoCache.delete(key);
 
     if (userId) await clearCacheSearch(userId);
 
