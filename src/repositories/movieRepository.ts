@@ -76,7 +76,7 @@ class MovieRepository {
     if (cached) return cached;
 
     const expiresAt = new Date(Date.now() + 60_000);
-    const favoritesCacheKey = await pool.query(
+    await pool.query(
       `INSERT INTO cache_keys_favorites ("cache_key", "user_id", "expires_at")
        VALUES ($1, $2, $3)
        ON CONFLICT ("cache_key", "user_id") DO NOTHING
