@@ -17,6 +17,7 @@ const edit = true;
 
 router.post("/", validate(validateCreateMovie, editCreateMovie), createMovie);
 router.patch("/:imdbID", validate(validateCreateMovie, edit), editMovie);
+router.patch("/favorite/:imdbID", editMovie);
 router.delete("/:imdbID", deleteMovie);
 
 router.get("/search", searchMovies);
