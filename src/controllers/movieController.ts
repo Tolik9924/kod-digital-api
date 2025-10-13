@@ -10,7 +10,7 @@ export const createMovie = async (req: Request, res: Response) => {
     const { username, movie } = req.body;
     const user = await userService.getUser(username);
     const createdMovie = await movieService.createMovie(user.id, movie);
-    return res.json(createdMovie);
+    return res.status(201).json(createdMovie);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
@@ -23,7 +23,7 @@ export const editMovie = async (req: Request, res: Response) => {
     const { username, movie } = req.body;
     const user = await userService.getUser(username);
     const updatedMovie = await movieService.editMovie(user.id, imdbID, movie);
-    res.json(updatedMovie);
+    res.status(201).json(updatedMovie);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
