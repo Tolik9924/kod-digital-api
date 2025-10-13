@@ -1,5 +1,9 @@
 import request from "supertest";
 import app from "../../src/server";
+import {
+  SEARCH_MOVIES_BATMAN_WITH_USERNAME,
+  SEARCH_MOVIES_BATMAN_WITHOUT_USERNAME,
+} from "../mockData/movies";
 
 describe("Movies API", () => {
   test("POST /movies, create movies", async () => {
@@ -34,5 +38,67 @@ describe("Movies API", () => {
         id: 260,
       },
     ]);
+  });
+
+  test("PATCH /movies/:imdbID", async () => {
+    const response = await request(app)
+      .patch("/api/movies/tt0372784")
+      .send({
+        username: "Tolik",
+        movie: {
+          Title: "Batman",
+          Year: "2023",
+          isFavorite: false,
+          Runtime: "200 min",
+          Genre: "Action",
+          Director: "George Lucas",
+          Poster: "",
+          Type: "movie",
+        },
+      })
+      .expect(200);
+
+    expect(response.body).toEqual([
+      {
+        Title: "Batman",
+        Year: "2023",
+        Runtime: "200 min",
+        Genre: "Action",
+        Director: "George Lucas",
+        isFavorite: false,
+        Poster: "",
+        Type: "movie",
+        user_id: 5,
+        id: 89,
+        imdbID: "tt0372784",
+      },
+    ]);
+  });
+
+  test("DELETE /movies/:imdbID", async () => {
+    const response = await request(app)
+      .delete("/api/movies/tt0372784")
+      .query({ username: "Tolik" })
+      .expect(200);
+
+    expect(response.body).toEqual({ message: "Movie deleted successfully" });
+  });
+
+  test("GET without username /movies/", async () => {
+    const response = await request(app)
+      .get("/api/movies/search")
+      .query({ title: "batman" })
+      .expect(200);
+
+    expect(response.body).toEqual(SEARCH_MOVIES_BATMAN_WITHOUT_USERNAME);
+  });
+
+  test("GET with username /movies/", async () => {
+    const response = await request(app)
+      .get("/api/movies/search")
+      .query({ title: "batman", username: "Tolik" })
+      .expect(200);
+
+    expect(response.body).toEqual(SEARCH_MOVIES_BATMAN_WITH_USERNAME);
   });
 });
