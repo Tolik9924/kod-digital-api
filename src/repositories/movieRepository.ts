@@ -215,7 +215,7 @@ class MovieRepository {
       );
     }
 
-    return "Deleted";
+    return "Movie deleted successfully";
   }
 }
 
