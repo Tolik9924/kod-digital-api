@@ -126,7 +126,7 @@ describe("Movies API", () => {
     ]);
   });
 
-  test("GET movie-info", async () => {
+  test("GET movie info", async () => {
     const response = await request(app)
       .get("/api/movies/movie-info/tt0372784")
       .query({ username: "Tolik" })
