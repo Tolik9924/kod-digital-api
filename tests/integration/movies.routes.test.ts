@@ -1,6 +1,7 @@
 import request from "supertest";
 import app from "../../src/server";
 import {
+  MOVIE_INFO,
   SEARCH_MOVIES_BATMAN_WITH_USERNAME,
   SEARCH_MOVIES_BATMAN_WITHOUT_USERNAME,
 } from "../mockData/movies";
@@ -131,46 +132,6 @@ describe("Movies API", () => {
       .query({ username: "Tolik" })
       .expect(200);
 
-    expect(response.body).toEqual({
-      Title: "Batman Begins",
-      Year: "2005",
-      Rated: "PG-13",
-      Released: "15 Jun 2005",
-      Runtime: "140 min",
-      Genre: "Action, Crime, Drama",
-      Director: "Christopher Nolan",
-      Writer: "Bob Kane, David S. Goyer, Christopher Nolan",
-      Actors: "Christian Bale, Michael Caine, Ken Watanabe",
-      Plot: "After witnessing his parents' death, billionaire Bruce Wayne learns the art of fighting to confront injustice. When he returns to Gotham as Batman, he must stop a secret society that intends to destroy the city.",
-      Language: "English, Mandarin",
-      Country: "United States, United Kingdom",
-      Awards: "Nominated for 1 Oscar. 15 wins & 79 nominations total",
-      Poster:
-        "https://m.media-amazon.com/images/M/MV5BODIyMDdhNTgtNDlmOC00MjUxLWE2NDItODA5MTdkNzY3ZTdhXkEyXkFqcGc@._V1_SX300.jpg",
-      Ratings: [
-        {
-          Source: "Internet Movie Database",
-          Value: "8.2/10",
-        },
-        {
-          Source: "Rotten Tomatoes",
-          Value: "85%",
-        },
-        {
-          Source: "Metacritic",
-          Value: "70/100",
-        },
-      ],
-      Metascore: "70",
-      imdbRating: "8.2",
-      imdbVotes: "1,673,263",
-      imdbID: "tt0372784",
-      Type: "movie",
-      DVD: "N/A",
-      BoxOffice: "$206,863,479",
-      Production: "N/A",
-      Website: "N/A",
-      Response: "True",
-    });
+    expect(response.body).toEqual(MOVIE_INFO);
   });
 });
